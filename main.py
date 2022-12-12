@@ -75,6 +75,19 @@ ramp = stepper(port=0, micro_steps=32, hold_current=20, run_current=20, accel_cu
 # //                       MAIN FUNCTIONS                       //
 # //             SHOULD INTERACT DIRECTLY WITH HARDWARE         //
 # ////////////////////////////////////////////////////////////////
+class Functions:
+
+    def panic(self):
+
+        ramp.softStop()
+        cyprus.set_servo_position(2, self.servo_closed)
+        sleep(.1)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+        cyprus.close()
+        GPIO.cleanup()
+        print("PANIC!")
+        MyApp().stop()
+
 
 # ////////////////////////////////////////////////////////////////
 # //        DEFINE MAINSCREEN CLASS THAT KIVY RECOGNIZES        //
@@ -86,7 +99,10 @@ ramp = stepper(port=0, micro_steps=32, hold_current=20, run_current=20, accel_cu
 # //      SHOULD NOT INTERACT DIRECTLY WITH THE HARDWARE        //
 # ////////////////////////////////////////////////////////////////
 
-class MainScreen(Screen):
+
+"""Global variables area"""
+
+class MainScreen(Screen, Functions):
     version = cyprus.read_firmware_version()
     staircaseSpeedText = '0'
     staircaseSpeed = 40
@@ -96,34 +112,35 @@ class MainScreen(Screen):
     gate_pos = 0
     servo_open = 0.5
     servo_closed = 0.25
-    ramp_sens_lower_state = 2
-    ramp_sens_lower_state = 2
 
     """Ramp toggle variables"""
     stair_state = 0  # ramp starts off
+    ramp_sens_lower_state = 2
+    ramp_sens_upper_state = 2
 
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
         self.initialize()
 
         Clock.schedule_interval(self.variables, 0.5)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
 
     def variables(self, dt):
 
-        if cyprus.read_gpio() & 0b0001:  # binary bitwise AND of the value returned from read.gpio()
-            self.ramp_sens_lower_state = 1
-            print("lower_state " + str(self.ramp_sens_lower_state))
-
-        else:
+        if cyprus.read_gpio() & 0b0010:  # binary bitwise AND of the value returned from read.gpio()
             self.ramp_sens_lower_state = 0
             print("lower_state " + str(self.ramp_sens_lower_state))
 
-        if cyprus.read_gpio() & 0b0010:
-            self.ramp_sens_upper_state = 1
+        else:
+            self.ramp_sens_lower_state = 1
+            print("lower_state " + str(self.ramp_sens_lower_state))
+
+        if cyprus.read_gpio() & 0b0001:
+            self.ramp_sens_upper_state = 0
             print("upper_state " + str(self.ramp_sens_upper_state))
 
         else:
-            self.ramp_sens_upper_state = 0
+            self.ramp_sens_upper_state = 1
             print("upper_state " + str(self.ramp_sens_upper_state))
 
         self.ids.rampSpeed.value = self.rampSpeed
@@ -141,7 +158,7 @@ class MainScreen(Screen):
     def toggleStaircase(self):
 
         if self.stair_state == 0:
-            cyprus.set_pwm_values(1, period_value=100000, compare_value=30000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+            cyprus.set_pwm_values(1, period_value=100000, compare_value=18000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
             self.stair_state = 1
 
         else:
@@ -151,15 +168,32 @@ class MainScreen(Screen):
     def toggleRamp(self):
 
         if self.ramp_sens_lower_state == 1:
-            ramp.start_relative_move(10)
+            ramp.start_relative_move(28.5)
 
         else:
-            print('')
-
-
+            sleep(.1)
+            ramp.softStop()
+            ramp.goHome()
 
     def auto(self):
         print("Run through one cycle of the perpetual motion machine")
+
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=18000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+        sleep(15)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+
+        cyprus.set_servo_position(2, self.servo_open)
+        sleep(5)
+        cyprus.set_servo_position(2, self.servo_closed)
+
+        if self.ramp_sens_lower_state == 1:
+            ramp.start_relative_move(28.5)
+
+        sleep(16)
+
+        sleep(.1)
+        ramp.softStop()
+        ramp.goHome()
 
     def setRampSpeed(self, speed):
         print("Set the ramp speed and update slider text")
@@ -168,6 +202,9 @@ class MainScreen(Screen):
         print("Set the staircase speed and update slider text")
 
     def initialize(self):
+
+        ramp.goHome()
+
         print("Close gate, stop staircase and home ramp here")
 
     def resetColors(self):
@@ -179,12 +216,17 @@ class MainScreen(Screen):
     def quit(self):
 
         ramp.free_all()
-        cyprus.set_servo_position(1, self.servo_closed)
-        cyprus.set_pwm_values(2, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+        sleep(.5)
+        cyprus.set_servo_position(2, .25)
+        sleep(.5)
+        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
         cyprus.close()
         GPIO.cleanup()
         print("Exit")
         MyApp().stop()
+
+    def PANIC(self):
+        self.panic()
 
 
 sm.add_widget(MainScreen(name='main'))

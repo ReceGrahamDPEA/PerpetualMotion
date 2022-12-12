@@ -8,7 +8,7 @@
     ##################
 
         # Quit button
-        Button:
+        DPEAButton:
             text: 'X'
             font_size: 23
             size_hint: None, None
@@ -71,6 +71,28 @@
             on_press: root.toggleStaircase()
             on_release: root.resetColors()
 
+        DPEAButton:
+            id: initialize
+            color: 0.180, 0.188, 0.980, 1
+            text: "Home Ramp"
+            center_x: root.width * 0.75
+            y: root.height * 0.55
+            background_color: 0, 0, 0, 0
+            background_normal: ''
+            size_hint: None,None
+            size: 300,100
+            on_press: root.initialize()
+            on_release: root.resetColors()
+
+        DPEAButton:
+            text: 'PANIC'
+            font_size: 23
+            size: 100, 100
+            x: root.width * 0.035
+            y: root.height * 0.85
+            background_color: 0.7, 0.7, 0.7, 1
+            on_release: root.PANIC()
+
 	##################
 	##### SLIDERS ####
     ##################
@@ -78,8 +100,8 @@
         Slider:
             id: rampSpeed
             orientation: 'horizontal'
-            min: 10
-            max: 200
+            min: 1
+            max: 6
             value: root.rampSpeed
             step: 1
             center_x: root.width * 0.6
