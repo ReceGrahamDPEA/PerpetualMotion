@@ -100,10 +100,10 @@
         Slider:
             id: rampSpeed
             orientation: 'horizontal'
-            min: 1
-            max: 6
-            value: root.rampSpeed
-            step: 1
+            min: 40
+            max: 100
+            value: 40
+            step: .5
             center_x: root.width * 0.6
             y: root.height * 0.15
             size_hint_x: 7
@@ -112,10 +112,10 @@
         Slider:
             id: staircaseSpeed
             orientation: 'horizontal'
-            min: 10
-            max: 50
-            value: root.staircaseSpeed
-            step: 1
+            min: 0
+            max: 18000
+            value: 18000
+            step: 1000
             center_x: root.width * 0.6
             y: root.height * 0.05
             size_hint_x: 7
@@ -159,4 +159,13 @@
             center_x: root.width * 0.9
             y: root.height * 0.02
             color: 0.8, 0.8, 0.8, 1
+
+        Label:
+            id: ball_ready
+            font_size: 30
+            color: 0.8, 0.8, 0.8, 1
+            bold: True
+            center_x: root.width * 0.2
+            y: root.height * 0.75
+            color: 0.9, 0.9, 0.9, 1
 

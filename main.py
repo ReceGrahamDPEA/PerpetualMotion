@@ -71,6 +71,8 @@ sm = ScreenManager()
 ramp = stepper(port=0, micro_steps=32, hold_current=20, run_current=20, accel_current=20, deaccel_current=20,
                steps_per_unit=200, speed=2)
 
+ramp.set_max_speed(4)
+
 # ////////////////////////////////////////////////////////////////
 # //                       MAIN FUNCTIONS                       //
 # //             SHOULD INTERACT DIRECTLY WITH HARDWARE         //
@@ -106,7 +108,6 @@ class MainScreen(Screen, Functions):
     version = cyprus.read_firmware_version()
     staircaseSpeedText = '0'
     staircaseSpeed = 40
-    rampSpeed = 2
 
     """Servo gate variables"""
     gate_pos = 0
@@ -122,7 +123,8 @@ class MainScreen(Screen, Functions):
         super(MainScreen, self).__init__(**kwargs)
         self.initialize()
 
-        Clock.schedule_interval(self.variables, 0.5)
+        Clock.schedule_interval(self.variables, 1)
+        cyprus.set_servo_position(2, self.servo_closed)
         cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
 
     def variables(self, dt):
@@ -131,9 +133,13 @@ class MainScreen(Screen, Functions):
             self.ramp_sens_lower_state = 0
             print("lower_state " + str(self.ramp_sens_lower_state))
 
+            self.ids.ball_ready.text = "Ball is not at bottom of ramp"
+
         else:
             self.ramp_sens_lower_state = 1
             print("lower_state " + str(self.ramp_sens_lower_state))
+
+            self.ids.ball_ready.text = "Ready to start!"
 
         if cyprus.read_gpio() & 0b0001:
             self.ramp_sens_upper_state = 0
@@ -142,8 +148,6 @@ class MainScreen(Screen, Functions):
         else:
             self.ramp_sens_upper_state = 1
             print("upper_state " + str(self.ramp_sens_upper_state))
-
-        self.ids.rampSpeed.value = self.rampSpeed
 
     def toggleGate(self):
 
@@ -158,7 +162,7 @@ class MainScreen(Screen, Functions):
     def toggleStaircase(self):
 
         if self.stair_state == 0:
-            cyprus.set_pwm_values(1, period_value=100000, compare_value=18000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+            cyprus.set_pwm_values(1, period_value=100000, compare_value=self.ids.staircaseSpeed.value, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
             self.stair_state = 1
 
         else:
@@ -170,36 +174,59 @@ class MainScreen(Screen, Functions):
         if self.ramp_sens_lower_state == 1:
             ramp.start_relative_move(28.5)
 
+            print("ramp is going up!")
+
         else:
             sleep(.1)
             ramp.softStop()
             ramp.goHome()
 
+            print("ramp is going down!")
+
     def auto(self):
         print("Run through one cycle of the perpetual motion machine")
 
-        cyprus.set_pwm_values(1, period_value=100000, compare_value=18000, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
-        sleep(15)
-        cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
-
-        cyprus.set_servo_position(2, self.servo_open)
-        sleep(5)
-        cyprus.set_servo_position(2, self.servo_closed)
-
         if self.ramp_sens_lower_state == 1:
+
+            ramp.set_speed(2)
+            cyprus.set_servo_position(2, self.servo_closed)
+            sleep(.1)
             ramp.start_relative_move(28.5)
 
-        sleep(16)
+            sleep(16)
 
-        sleep(.1)
-        ramp.softStop()
-        ramp.goHome()
+            sleep(.1)
+            ramp.softStop()
+            ramp.goHome()
+
+            cyprus.set_pwm_values(1, period_value=100000, compare_value=self.ids.staircaseSpeed.value, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+            sleep(15)
+            cyprus.set_pwm_values(1, period_value=100000, compare_value=0, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
+
+            cyprus.set_servo_position(2, self.servo_open)
+            sleep(2)
+            cyprus.set_servo_position(2, self.servo_closed)
+
+        else:
+
+            print("please move ball to bottom of ramp to start")
 
     def setRampSpeed(self, speed):
-        print("Set the ramp speed and update slider text")
+
+        if not ramp.is_busy():
+            ramp.set_speed(self.ids.rampSpeed.value * .02)
+            ramp_check = self.ids.rampSpeed.value * .02
+            print("ramp speed is " + str(ramp_check))
+
+        else:
+
+            print("ramp is busy, leave it be!")
 
     def setStaircaseSpeed(self, speed):
-        print("Set the staircase speed and update slider text")
+
+        if self.stair_state == 1:
+
+            cyprus.set_pwm_values(1, period_value=100000, compare_value=self.ids.staircaseSpeed.value, compare_mode=cyprus.LESS_THAN_OR_EQUAL)
 
     def initialize(self):
 
